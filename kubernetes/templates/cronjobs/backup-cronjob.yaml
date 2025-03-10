@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ .Values.fullnameOverride }}
+spec:
+  schedule: {{ .Values.schedule }}
+  successfulJobsHistoryLimit: {{ .Values.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: {{ .Values.restartPolicy }}  # Asegúrate de tenerlo definido
+          {{- if .Values.useVolumes }}
+          volumes:
+          - name: "backup-script-volume"
+            configMap:
+              name: "mongo-backup-script"
+              items:
+              - key: "mongo-backup-script.sh"
+                path: "mongo-backup-script.sh"
+          {{- end }}
+          containers:
+          - name: "{{ .Values.nameOverride }}"  # Usar nameOverride como nombre
+            image: "{{ .Values.image }}"  # Usa image desde values.yaml
+            command: {{ toJson .Values.command }}
+            env:
+            {{- range $index, $commonEnv := .Values.commonEnv }}
+            - name: {{ $commonEnv.name }}
+              {{- if $commonEnv.valueFrom }}
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $commonEnv.valueFrom.secretKeyRef.name }}"
+                  key: "{{ $commonEnv.valueFrom.secretKeyRef.key }}"
+              {{- else }}
+              value: "{{ $commonEnv.value }}"
+              {{- end }}
+            {{- end }}
+
+            {{- range $index, $envVar := .Values.env }}
+            - name: {{ $envVar.name }}
+              {{- if $envVar.valueFrom }}
+              valueFrom:
+                secretKeyRef:
+                  name: "{{ $envVar.valueFrom.secretKeyRef.name }}"
+                  key: "{{ $envVar.valueFrom.secretKeyRef.key }}"
+              {{- else }}
+              value: "{{ $envVar.value }}"
+              {{- end }}
+            {{- end }}
+          {{- if .Values.useVolumes }}
+            volumeMounts:
+            - name: "backup-script-volume"
+              mountPath: "/scripts"
+              readOnly: true
+          {{- end }}

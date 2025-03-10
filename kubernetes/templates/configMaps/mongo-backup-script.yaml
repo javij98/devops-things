@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-backup-script
+data:
+  mongo-backup-script.sh: |
+    #!/bin/bash
+
+    PROJECT=$PROJECT_NAME
+    ENVIRONMENT=$ENVIRONMENT
+
+    # Mongo credentials
+    DB=$MONGO_DATABASE
+    MONGO_HOST=$MONGO_HOST
+    MONGO_PORT=$MONGO_PORT
+    MONGO_ROOT_USER=$MONGO_ROOT_USER
+    MONGO_ROOT_PASSWORD=$MONGO_ROOT_PASSWORD
+
+    # AWS credentials
+    AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    AWS_S3_URL=$AWS_S3_URL
+
+    # Logs function
+    log_message() {
+        local level="$1"
+        local message="$2"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${level}] ${message}"
+    }
+
+    FAILED_DBS=""
+    SUCCESS_COUNT=0
+    TOTAL_DBS=0
+
+    log_message "INFO" "Initiating mongoDB backup process"
+
+    
+    # Check if mongo binary is installed
+    if ! command -v mongosh &> /dev/null; then
+        log_message "ERROR" "The 'mongo' command is not installed on this container. Aborting..."
+        exit 1
+    fi
+
+    # Check if 'mongodump' is installed
+    if ! command -v mongodump &> /dev/null; then
+        log_message "ERROR" "The 'mongodump' command is not installed on this container. Aborting..."
+        exit 1
+    fi
+
+    # Check if AWS CLI is installed
+    if ! command -v aws &> /dev/null; then
+        log_message "ERROR" "The 'aws' command is not installed on this container. Aborting..."
+        exit 1
+    fi
+
+    # Wait for MongoDB to be ready
+    until mongosh --host "${MONGO_HOST}" --port "${MONGO_PORT}" --eval "db.adminCommand('ping')" &> /dev/null; do
+        log_message "WARN" "Waiting for MongoDB to start..."
+        sleep 5
+    done
+    log_message "INFO" "MongoDB is running"
+
+    TOTAL_DBS=$((TOTAL_DBS + 1))
+
+    TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+    BACKUP_FILE_NAME="${PROJECT}/${ENVIRONMENT}/${TIMESTAMP}_${PROJECT}_${DB}.gz"
+    S3_BUCKET_URL="s3://adcenter-s3-backups/${BACKUP_FILE_NAME}"
+
+    log_message "INFO" "Starting database backup: ${DB}"
+
+    # Additional MongoDB connection verification before starting mongodump
+    if mongosh --host "${MONGO_HOST}" --port "${MONGO_PORT}" --username "${MONGO_ROOT_USER}" --password "${MONGO_ROOT_PASSWORD}" --eval "db.stats()" &> /dev/null; then
+        log_message "INFO" "MongoDB connection successfully verified."
+    else
+        log_message "ERROR" "Could not connect to MongoDB with the provided credentials. Aborting..."
+        exit 1
+    fi
+
+    # Backup
+    if mongodump --host "${MONGO_HOST}" --port "${MONGO_PORT}" --username "${MONGO_ROOT_USER}" --password "${MONGO_ROOT_PASSWORD}" --db "${DB}" --archive | gzip | aws --endpoint-url "${AWS_S3_URL}" s3 cp - "${S3_BUCKET_URL}"; then
+        log_message "INFO" "Successful ${DB} backup. Uploaded to ${S3_BUCKET_URL}"
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+    else
+        log_message "ERROR" "Error in the ${DB} backup!"
+        FAILED_DBS="${FAILED_DBS}${DB}, "
+    fi
+
+    # Show the changes in s3
+    aws s3 ls --endpoint-url "${AWS_S3_URL}" "${PROJECT}/${ENVIRONMENT}"
+
+    # Summary
+    if [ -n "${FAILED_DBS}" ]; then
+        log_message "ERROR" "The back-up work found errors."
+        log_message "ERROR" "Failed databases: ${FAILED_DBS%??}"
+        log_message "INFO" "Successful backups: ${SUCCESS_COUNT} / ${TOTAL_DBS}"
+    else
+        log_message "INFO" "All database backups completed correctly."
+        log_message "INFO" "Total successful backups: ${TOTAL_DBS} / ${TOTAL_DBS}"
+    fi
+
+    log_message "INFO" "MongoDB backup process completed"
+
