@@ -26,6 +26,10 @@ sudo apt-get install git curl jq
 1. **Run the script:**
 
    ```bash
+   # Using the relative symlink:
+   ./clone-bitbucket-repo
+
+   # Or using the script directly:
    ./clone-bitbucket-repo.sh
    ```
 
