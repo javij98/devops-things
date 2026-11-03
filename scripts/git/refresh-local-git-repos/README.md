@@ -1,73 +1,73 @@
 # refresh-local-git-repos.sh
 
-Script Bash interactivo y con opciones CLI para gestionar, refrescar y clonar repositorios Git organizados por proyectos bajo un directorio base (por defecto `~/workspace/projects`).
+Interactive and CLI-driven Bash utility to manage, synchronize, and batch-clone Git repositories organized by project folders under a base directory (default `~/workspace/projects`).
 
-## Características principales
+## Key Features
 
-1. **Modo interactivo guiado:** Si se ejecuta sin parámetros, presenta un menú con todos los proyectos locales detectados, su número de repositorios y opciones de configuración.
-2. **Soporte de flags / CLI:** Permite especificar proyectos concretos (`-p ocp-apijo,ocp-penyas`) o todos (`-p all`).
-3. **Clonado automático de nuevos repositorios remotos:** Opción `-c, --clone-new` para consultar la API REST de Bitbucket (`bitbucket.once.es`), comparar con los repos locales y clonar automáticamente aquellos que falten.
-4. **Actualización segura de Git:**
-   - Valida el estado del working tree antes de tocar nada.
-   - Ejecuta `git fetch --all --prune`.
-   - Aplica únicamente `git pull --ff-only` si la rama local está detrás y limpia.
-5. **Control riguroso de fallos y bloqueos:**
-   - **Detección temprana de CAPTCHA:** Si Bitbucket bloquea la cuenta por intentos fallidos, el script alerta de inmediato y detiene las peticiones sucesivas para evitar bloqueos prolongados.
-   - **Exclusión de raíces inválidas:** No procesa el directorio base si contiene `.git` corruptos o vacíos (elimina el falso error `1/254`).
-   - **Protección de trabajo en curso (BLOCKED):** No sobrescribe ramas divergidas, detached HEAD, conflictos ni cambios locales sin commit (`git stash` / `git commit` sugerido).
+1. **Interactive Guided Mode:** When launched without arguments, displays a dynamic menu listing all discovered local projects, repo counts, and operational options.
+2. **CLI Flags Support:** Specify target projects (`-p ocp-apijo,ocp-penyas`) or all (`-p all`).
+3. **Automatic Remote Discovery & Clone:** Option `-c, --clone-new` queries the Bitbucket REST API (`bitbucket.once.es`), compares with local repos, and clones missing repositories automatically.
+4. **Safe Git Synchronization:**
+   - Validates working tree cleanliness before making any changes.
+   - Executes `git fetch --all --prune`.
+   - Strictly applies `git pull --ff-only` when the local branch is behind and clean.
+5. **Robust Failure & Lockout Handling:**
+   - **Early CAPTCHA Detection:** If Bitbucket requires CAPTCHA resolution, the script alerts immediately and halts subsequent requests to prevent prolonged account lockouts.
+   - **Root Directory Protection:** Ignores corrupt or empty `.git` entries in base project roots.
+   - **Work-in-Progress Protection (BLOCKED):** Never overwrites uncommitted local modifications, detached HEADs, or diverged branches (`git stash` / manual intervention suggested).
 
 ---
 
-## Opciones y Parámetros
+## Options & Arguments
 
 ```text
-Uso: refresh-local-git-repos.sh [opciones]
+Usage: refresh-local-git-repos.sh [options]
 
-Opciones:
-  -p, --proyectos <p1,p2|all>   Proyectos a refrescar (ej: ocp-apijo, ocp-penyas o all)
-  -c, --clone-new               Detecta y clona automáticamente repos remotos nuevos en Bitbucket
-  -s, --servicio <filtro>       Filtra microservicios dentro de los proyectos por nombre
-  -n, --dry-run                 No modifica nada: solo valida estado local y upstream
-  -d, --dir <directorio>        Directorio base de proyectos (defecto: ~/workspace/projects)
-  -h, --help                    Muestra esta ayuda
+Options:
+  -p, --proyectos <p1,p2|all>   Target projects to refresh (e.g. ocp-apijo, ocp-penyas or all)
+  -c, --clone-new               Detect and automatically clone new remote repos from Bitbucket
+  -s, --servicio <filter>       Filter microservices inside projects by name pattern
+  -n, --dry-run                 Dry-run mode: inspect local and upstream state without changes
+  -d, --dir <directory>         Base directory of projects (default: ~/workspace/projects)
+  -h, --help                    Show help
 ```
 
 ---
 
-## Ejemplos de uso
+## Usage Examples
 
-### 1. Modo interactivo (Recomendado)
+### 1. Interactive Mode (Recommended)
 ```bash
-~/workspace/scripts/bitbucket/refresh-local-git-repos/refresh-local-git-repos.sh
+./refresh-local-git-repos.sh
 ```
 
-### 2. Refrescar un único proyecto
+### 2. Refresh a Single Project
 ```bash
-refresh-local-git-repos.sh -p ocp-apijo
+./refresh-local-git-repos.sh -p ocp-apijo
 ```
 
-### 3. Refrescar varios proyectos específicos y clonar los nuevos
+### 3. Refresh Multiple Projects and Clone Missing Repositories
 ```bash
-refresh-local-git-repos.sh -p ocp-apijo,ocp-penyas -c
+./refresh-local-git-repos.sh -p ocp-apijo,ocp-penyas -c
 ```
 
-### 4. Refrescar todos los proyectos locales en modo dry-run
+### 4. Dry-run Mode Across All Projects
 ```bash
-refresh-local-git-repos.sh -p all -n
+./refresh-local-git-repos.sh -p all -n
 ```
 
-### 5. Filtrar por un microservicio concreto en todos los proyectos
+### 5. Filter by Microservice Name Across All Projects
 ```bash
-refresh-local-git-repos.sh -p all -s dow-jones
+./refresh-local-git-repos.sh -p all -s user-service
 ```
 
 ---
 
-## Estados del script
+## Status Definitions
 
-* `UPDATED`: Repositorio actualizado con `pull --ff-only`.
-* `UP-TO-DATE`: Ya estaba sincronizado con su upstream.
-* `WOULD-UPDATE`: (Modo dry-run) Requiere pull y es seguro aplicarlo.
-* `CLONED`: Nuevo repositorio remoto clonado desde Bitbucket.
-* `BLOCKED`: Requiere intervención manual (cambios sin guardar, divergencia, merge en curso).
-* `ERROR`: Fallo de red, autenticación o comando Git.
+* `UPDATED`: Repository fast-forwarded via `pull --ff-only`.
+* `UP-TO-DATE`: Already in sync with upstream.
+* `WOULD-UPDATE`: (Dry-run mode) Behind upstream and safe to update.
+* `CLONED`: Newly discovered remote repository cloned from Bitbucket.
+* `BLOCKED`: Requires manual action (uncommitted changes, detached HEAD, divergence).
+* `ERROR`: Network failure, authentication error, or git command failure.

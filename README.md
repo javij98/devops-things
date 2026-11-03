@@ -1,35 +1,35 @@
 # DevOps Things
 
-Repositorio centralizado de herramientas, scripts de automatización y plantillas Kubernetes para administración, auditoría y monitoreo.
+Centralized repository containing operational automation scripts, utilities, and Kubernetes templates for infrastructure administration, auditing, and monitoring.
 
-## 📁 Estructura del Repositorio
+## 📁 Repository Structure
 
 ```text
 devops-things/
 ├── kubernetes/
-│   └── templates/                # Plantillas y manifiestos declarativos de Kubernetes
-│       ├── configMaps/           # Ejemplos y plantillas de ConfigMaps
-│       ├── cronjobs/             # Plantillas de CronJobs (e.g. backup)
-│       └── pods/                 # Pods utilitarios para administración (e.g. AWS CLI)
-└── scripts/                      # Colección de scripts y utilidades operacionales
-    ├── git/                      # Automatización y gestión de repositorios Git/Bitbucket
-    │   ├── clone-bitbucket-repo/ # Clonado masivo interactivo de repos por proyecto
-    │   └── refresh-local-git-repos/ # Sincronización interactiva y clonado incremental
-    └── kubernetes/               # Utilidades operacionales para Kubernetes
-        ├── admin/                # Scripts de administración (e.g. copia de secretos entre namespaces)
-        ├── audit/                # Auditoría de recursos (HPA/autoscaling, Kafka/OCI)
-        └── monitoring/           # Monitoreo de recursos y latencia/salud de pods
+│   └── templates/                # Declarative Kubernetes manifests and templates
+│       ├── configMaps/           # ConfigMap templates (e.g. backup scripts)
+│       ├── cronjobs/             # CronJob templates (e.g. database backup jobs)
+│       └── pods/                 # Utility pods for administration (e.g. AWS CLI)
+└── scripts/                      # Collection of operational automation scripts
+    ├── git/                      # Git and SCM automation tools
+    │   ├── clone-bitbucket-repo/ # Interactive batch cloning by Bitbucket project
+    │   └── refresh-local-git-repos/ # Interactive repo sync and remote discovery
+    └── kubernetes/               # Operational utilities for Kubernetes
+        ├── admin/                # Administration scripts (e.g. secret replication)
+        ├── audit/                # Resource auditing (HPA autoscaling, Kafka/OCI)
+        └── monitoring/           # Real-time resource usage and pod latency monitoring
 ```
 
-## 🛠️ Componentes
+## 🛠️ Components
 
-### Scripts de Git / SCM
-- **[clone-bitbucket-repo](scripts/git/clone-bitbucket-repo/):** Script interactivo para clonar repositorios de proyectos Bitbucket.
-- **[refresh-local-git-repos](scripts/git/refresh-local-git-repos/):** Script interactivo con soporte CLI para refrescar repositorios locales mediante `fetch`/`pull --ff-only` y clonar repositorios nuevos del proyecto remoto.
+### Git & SCM Scripts
+- **[clone-bitbucket-repo](scripts/git/clone-bitbucket-repo/):** Interactive script to clone all repositories within a Bitbucket project.
+- **[refresh-local-git-repos](scripts/git/refresh-local-git-repos/):** Interactive and CLI-driven utility to refresh local repositories with `fetch`/`pull --ff-only` and discover/clone new remote repos.
 
-### Scripts de Kubernetes
-- **[admin/copy-secrets](scripts/kubernetes/admin/):** Copia segura de secretos entre diferentes namespaces en Kubernetes.
-- **[audit/audit-autoscaling](scripts/kubernetes/audit/audit-autoscaling/):** Auditoría interactiva y detallada de HPAs, métricas y límites de recursos.
-- **[audit/kafka-auditor](scripts/kubernetes/audit/kafka-auditor/):** Rastreo de configuraciones y credenciales Kafka/OCI en despliegues, ConfigMaps y secretos.
-- **[monitoring/monitor-pod-resources](scripts/kubernetes/monitoring/monitor-pod-resources/):** Monitoreo continuo de uso de CPU y memoria de pods en tiempo real.
-- **[monitoring/pods-health](scripts/kubernetes/monitoring/pods-health/):** Cálculo de tiempos de respuesta de endpoints de salud (readiness/liveness) y simulación de fallos.
+### Kubernetes Scripts
+- **[admin/copy-secrets](scripts/kubernetes/admin/):** Securely copy Kubernetes secrets across different namespaces.
+- **[audit/audit-autoscaling](scripts/kubernetes/audit/audit-autoscaling/):** Audit HPAs and verify compliance with the corporate 80% autoscaling target ratio.
+- **[audit/kafka-auditor](scripts/kubernetes/audit/kafka-auditor/):** Scan deployments, configmaps, and secrets for Kafka and OCI references.
+- **[monitoring/monitor-pod-resources](scripts/kubernetes/monitoring/monitor-pod-resources/):** Real-time CLI dashboard for CPU and memory usage of pods and underlying nodes.
+- **[monitoring/pods-health](scripts/kubernetes/monitoring/pods-health/):** Measure readiness/liveness endpoint latencies and simulate failure scenarios.

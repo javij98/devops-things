@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # ===============================================================================
-# Descripción: Script para clonar todos los repositorios de un proyecto Bitbucket
-# Autor: Javier Jiménez Molina
+# Description: Script to clone all repositories from a Bitbucket project
+# Author: Javier Jiménez Molina
 # ===============================================================================
 
 # ----------------------------------
-# Configuración y Variables Globales
+# Configuration and Global Variables
 # ----------------------------------
 SERVER="bitbucket.once.es"
 
-# Colores
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -18,7 +18,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # ------------------------------
-# Funciones Auxiliares
+# Helper Functions
 # ------------------------------
 
 read_password() {
@@ -75,11 +75,11 @@ get_project() {
     fi
 }
 
-# Valida que el directorio actual sea el correcto
+# Validates that current directory is safe and matches the project
 validate_safe_directory() {
     local project="$1"
     
-    # Normalización
+    # Normalization
     local current_dir_clean=$(basename "$PWD" | tr '[:upper:]' '[:lower:]' | sed 's/[-_]//g')
     local project_clean=$(echo "$project" | tr '[:upper:]' '[:lower:]' | sed 's/ocp//g' | sed 's/[-_]//g')
 
@@ -99,7 +99,7 @@ validate_safe_directory() {
     fi
 }
 
-# Obtiene la lista de repositorios del proyecto
+# Fetches the list of repositories for the given project
 fetch_repositories() {
     local user="$1"
     local pass="$2"
@@ -162,47 +162,39 @@ clone_repositories() {
     echo "✅ Se encontraron $repo_count repositorios"
     echo -e "${BLUE}🔎 Obteniendo lista de repositorios ...${NC}"
 
-    # Contadores
+    # Counters
     local success_count=0
     local fail_count=0
     local skip_count=0
 
     while IFS= read -r repo_url_raw; do
-        # Limpieza URL
+        # Clean URL
         local repo_url="${repo_url_raw%%\?*}"
         local repo_dir="$(basename "$repo_url")"
         repo_dir="${repo_dir%.git}"
 
         if [ -d "$repo_dir/.git" ]; then
-            echo -e "${YELLOW}⏭️  $repo_dir ya existe (repo git). Saltando.${NC}"
+            echo -e "${YELLOW}⏭️  $repo_dir already exists (git repo). Skipping.${NC}"
             ((skip_count++))
             continue
         elif [ -d "$repo_dir" ]; then
-            echo -e "${YELLOW}⚠️  Existe '$repo_dir' pero no es git. Saltando.${NC}"
+            echo -e "${YELLOW}⚠️  Directory '$repo_dir' exists but is not a git repo. Skipping.${NC}"
             ((skip_count++))
             continue
         fi
 
-        echo -e "${BLUE}🔄 Clonando: $repo_url ...${NC}"
+        echo -e "${BLUE}🔄 Cloning: $repo_url ...${NC}"
         
-        # Construye URL con credenciales implícitas si es necesario, 
-        # pero como usamos GIT_ASKPASS, git debería manejarlo. 
-        # Sin embargo, el script original inyectaba las credenciales en la URL.
-        # Mantendremos la inyección para asegurar compatibilidad con la forma previa.
+        # Build URL with encoded credentials
         local user_encoded=$(url_encode "$user")
         local pass_encoded=$(url_encode "$pass")
         local repo_url_with_creds="https://${user_encoded}:${pass_encoded}@${SERVER}${repo_url#https://${SERVER}}"
         
-        # Ojo: El script original usaba repo_url en el git clone (confiando en GIT_ASKPASS o keychains?)
-        # La linea original era: if git clone -- "$repo_url" 2>&1; then
-        # Y también construía repo_url_with_creds pero NO la usaba en el comando git clone.
-        # Asumiremos que GIT_ASKPASS configurado arriba es suficiente.
-        
         if git clone -- "$repo_url_with_creds" 2>&1; then
-            echo -e "${GREEN}✅ Clonado: $repo_dir${NC}"
+            echo -e "${GREEN}✅ Cloned: $repo_dir${NC}"
             ((success_count++))
         else
-            echo -e "${RED}❌ Error al clonar: $repo_url${NC}" >&2
+            echo -e "${RED}❌ Error cloning: $repo_url${NC}" >&2
             ((fail_count++))
         fi
         
@@ -211,7 +203,7 @@ clone_repositories() {
     print_summary "$success_count" "$fail_count" "$skip_count"
 }
 
-# Imprime el resumen de operaciones
+# Prints summary of operations
 print_summary() {
     local s="$1"
     local f="$2"
@@ -219,10 +211,10 @@ print_summary() {
 
     echo ""
     echo -e "${BLUE}=========================================${NC}"
-    echo -e "${BLUE} Resumen de operaciones:${NC}"
-    echo -e "   ${GREEN}✅ Exitosos: $s${NC}"
-    echo -e "   ${RED}❌ Fallidos: $f${NC}"
-    echo -e "   ${YELLOW}⏭️  Saltados: $k${NC}"
+    echo -e "${BLUE} Operation Summary:${NC}"
+    echo -e "   ${GREEN}✅ Successful: $s${NC}"
+    echo -e "   ${RED}❌ Failed: $f${NC}"
+    echo -e "   ${YELLOW}⏭️  Skipped: $k${NC}"
     echo -e "${BLUE}=========================================${NC}"
 
     if [ "$f" -gt 0 ]; then
@@ -231,7 +223,7 @@ print_summary() {
 }
 
 # ------------------------------
-# Bloque Principal (Main)
+# Main Block
 # ------------------------------
 main() {
     print_banner

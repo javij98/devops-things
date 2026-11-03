@@ -2,20 +2,20 @@
 # ==============================================================================
 # refresh-local-git-repos.sh
 # 
-# Script interactivo y con flags para:
-# 1. Seleccionar proyectos específicos o todos ('all') en ~/workspace/projects.
-# 2. Refrescar repositorios locales mediante git fetch --all --prune y git pull --ff-only.
-# 3. Detectar y clonar automáticamente nuevos repositorios remotos desde Bitbucket.
-# 4. Control exhaustivo de fallos:
-#    - Detección de bloqueos por CAPTCHA / cuenta bloqueada en Bitbucket.
-#    - Protección contra sobreescritura de cambios locales (BLOCKED).
-#    - Exclusión automática del directorio base de proyectos (evita falso error 1/254).
-#    - Clasificación precisa de errores de Git y red.
+# Interactive and CLI-flag script to:
+# 1. Select specific projects or all ('all') in ~/workspace/projects.
+# 2. Refresh local repositories via git fetch --all --prune and git pull --ff-only.
+# 3. Automatically detect and clone new remote repositories from Bitbucket.
+# 4. Comprehensive failure handling:
+#    - Detection of CAPTCHA / account lockouts in Bitbucket.
+#    - Protection against overwriting local changes (BLOCKED).
+#    - Automatic exclusion of base project directories (prevents false 1/254 errors).
+#    - Accurate classification of Git and network errors.
 # ==============================================================================
 
 set -uo pipefail
 
-# Colores (solo si terminal interactivo)
+# Colors (interactive terminal only)
 if [ -t 1 ]; then
   BOLD="\033[1m"
   GREEN="\033[0;32m"
@@ -36,14 +36,14 @@ else
   NC=""
 fi
 
-# Variables de configuración
+# Configuration variables
 SERVER="bitbucket.once.es"
 DRY_RUN=0
 CLONE_NEW=0
 SELECTED_PROJECTS_ARG=""
 SERVICE_FILTER=""
 
-# Directorio base por defecto
+# Default base directory
 if [[ -d "$PWD/ocp-apijo" || -d "$PWD/ocp-penyas" ]]; then
   BASE_DIR="$PWD"
 elif [[ -d "/home/jjimenezmo/workspace/projects" ]]; then
@@ -52,7 +52,7 @@ else
   BASE_DIR="$PWD"
 fi
 
-# Contadores globales
+# Global counters
 UPDATED_COUNT=0
 UP_TO_DATE_COUNT=0
 WOULD_UPDATE_COUNT=0
@@ -63,7 +63,7 @@ ERROR_COUNT=0
 declare -a BLOCKED_REPORTS=()
 declare -a ERROR_REPORTS=()
 
-# Estado del repositorio actual
+# Current repository state
 CURRENT_STATUS=""
 CURRENT_SUMMARY=""
 CURRENT_DETAILS=""
@@ -78,12 +78,12 @@ declare -a CURRENT_GUIDES=()
 
 CAPTCHA_ABORT=0
 
-# Credenciales en memoria para API Bitbucket
+# In-memory credentials for Bitbucket API
 BB_USER=""
 BB_PASS=""
 
 # ==============================================================================
-# AYUDA Y USO
+# HELP AND USAGE
 # ==============================================================================
 usage() {
   echo -e "${BOLD}Uso:${NC} $(basename "$0") [opciones]
@@ -101,7 +101,7 @@ Si se ejecuta sin parámetros, el script entrará en ${BOLD}modo interactivo gui
 }
 
 # ==============================================================================
-# PARSEO DE PARÁMETROS
+# PARAMETER PARSING
 # ==============================================================================
 while (($# > 0)); do
   case "$1" in
@@ -146,7 +146,7 @@ while (($# > 0)); do
 done
 
 # ==============================================================================
-# FUNCIONES AUXILIARES
+# HELPER FUNCTIONS
 # ==============================================================================
 shell_quote() {
   printf '%q' "$1"
@@ -261,9 +261,9 @@ set_error_result() {
 }
 
 # ==============================================================================
-# DESCUBRIMIENTO DE PROYECTOS Y REPOSITORIOS
+# PROJECT AND REPOSITORY DISCOVERY
 # ==============================================================================
-# Obtiene proyectos locales que contengan repositorios Git
+# Retrieves local projects containing Git repositories
 get_available_projects() {
   local p
   local bname
@@ -271,7 +271,7 @@ get_available_projects() {
   for p in "$BASE_DIR"/*; do
     [[ -d "$p" ]] || continue
     bname=$(basename "$p")
-    # Ignorar carpetas de sistema o no proyectos
+    # Ignore system folders or non-projects
     [[ "$bname" != .* && "$bname" != "graphify-out" && "$bname" != "vscode-workspaces" && "$bname" != "worktrees" ]] || continue
     count=$(find "$p" -maxdepth 2 -name .git 2>/dev/null | wc -l)
     if ((count > 0)); then
@@ -280,13 +280,13 @@ get_available_projects() {
   done
 }
 
-# Cuenta repositorios válidos dentro de un proyecto
+# Counts valid repositories inside a project
 count_project_repos() {
   local proj_dir="$1"
   find "$proj_dir" -maxdepth 2 -name .git 2>/dev/null | wc -l
 }
 
-# Infiere la clave del proyecto en Bitbucket a partir de los remotos locales
+# Infers Bitbucket project key from local remotes
 get_bitbucket_project_key() {
   local proj_dir="$1"
   local sample_git
@@ -306,7 +306,7 @@ get_bitbucket_project_key() {
   printf '%s' "$key"
 }
 
-# Intenta extraer credenciales guardadas en remotes existentes
+# Attempts to extract saved credentials from existing remotes
 try_extract_remote_creds() {
   local p
   local g
@@ -327,7 +327,7 @@ try_extract_remote_creds() {
 }
 
 # ==============================================================================
-# MODO INTERACTIVO
+# INTERACTIVE MODE
 # ==============================================================================
 if [ -z "$SELECTED_PROJECTS_ARG" ]; then
   echo -e "${BOLD}${CYAN}======================================================================${NC}"
@@ -335,7 +335,7 @@ if [ -z "$SELECTED_PROJECTS_ARG" ]; then
   echo -e "${BOLD}${CYAN}======================================================================${NC}"
   echo -e "Directorio base: ${YELLOW}$BASE_DIR${NC}\n"
 
-  # Listar proyectos disponibles
+  # List available projects
   declare -a PROJ_LIST=()
   while IFS= read -r p; do
     [[ -n "$p" ]] || continue
@@ -365,7 +365,7 @@ if [ -z "$SELECTED_PROJECTS_ARG" ]; then
   if [[ "$opt_proj" == "0" || "$opt_proj" == "all" || "$opt_proj" == "todos" ]]; then
     SELECTED_PROJECTS_ARG="all"
   else
-    # Parsear lista separada por comas o números
+    # Parse comma- or number-separated list
     declare -a CHOSEN=()
     IFS=',' read -r -a tokens <<< "$opt_proj"
     for tok in "${tokens[@]}"; do
@@ -385,7 +385,7 @@ if [ -z "$SELECTED_PROJECTS_ARG" ]; then
   fi
   echo ""
 
-  # Pregunta: Clonar nuevos repos remotos
+  # Prompt: Clone new remote repos
   read -r -p "2) ¿Comprobar y clonar nuevos repositorios desde Bitbucket? [s/N]: " opt_clone
   if [[ "$opt_clone" =~ ^[sSyY]$ ]]; then
     CLONE_NEW=1
@@ -394,12 +394,12 @@ if [ -z "$SELECTED_PROJECTS_ARG" ]; then
   fi
   echo ""
 
-  # Pregunta: Filtro de microservicio
+  # Prompt: Microservice filter
   read -r -p "3) Filtrar por nombre de microservicio (opcional, ENTER para todos): " input_svc
   SERVICE_FILTER="$input_svc"
   echo ""
 
-  # Pregunta: Dry run
+  # Prompt: Dry run
   read -r -p "4) ¿Modo dry-run (solo comprobar sin hacer fetch ni pull)? [s/N]: " opt_dry
   if [[ "$opt_dry" =~ ^[sSyY]$ ]]; then
     DRY_RUN=1
@@ -410,7 +410,7 @@ if [ -z "$SELECTED_PROJECTS_ARG" ]; then
 fi
 
 # ==============================================================================
-# RESOLUCIÓN DE PROYECTOS SELECCIONADOS
+# RESOLUTION OF SELECTED PROJECTS
 # ==============================================================================
 declare -a TARGET_PROJECTS=()
 if [[ "$SELECTED_PROJECTS_ARG" == "all" || "$SELECTED_PROJECTS_ARG" == "todos" ]]; then
@@ -436,7 +436,7 @@ if ((${#TARGET_PROJECTS[@]} == 0)); then
 fi
 
 # ==============================================================================
-# GESTIÓN DE CLONADO REMOTO DE NUEVOS REPOSITORIOS
+# REMOTE CLONING OF NEW REPOSITORIES
 # ==============================================================================
 check_and_clone_new_repos() {
   local project="$1"
@@ -446,7 +446,7 @@ check_and_clone_new_repos() {
 
   echo -e "\n${BOLD}${MAGENTA}--- Comprobando repositorios remotos en Bitbucket (${project_key}) ---${NC}"
 
-  # Si no hay credenciales, intentar extraerlas de remotes o pedirlas
+  # If no credentials, try extracting from remotes or prompt user
   if [[ -z "$BB_USER" || -z "$BB_PASS" ]]; then
     if ! try_extract_remote_creds; then
       echo -e "${CYAN}Se requieren credenciales para consultar la API de Bitbucket (https://${SERVER}):${NC}"
@@ -495,14 +495,14 @@ check_and_clone_new_repos() {
   while IFS= read -r repo_slug; do
     [[ -n "$repo_slug" ]] || continue
     
-    # Filtrar por servicio si aplica
+    # Filter by service if applicable
     if [[ -n "$SERVICE_FILTER" && "$repo_slug" != *"$SERVICE_FILTER"* ]]; then
       continue
     fi
 
     local target_dir="$proj_dir/$repo_slug"
     if [[ -d "$target_dir" ]]; then
-      continue # Ya existe en local
+      continue # Already exists locally
     fi
 
     echo -e "${CYAN}➕ Detectado nuevo repositorio remoto: ${BOLD}${repo_slug}${NC}"
@@ -512,7 +512,7 @@ check_and_clone_new_repos() {
       continue
     fi
 
-    # Obtener URL HTTP de clonado
+    # Get HTTP clone URL
     local clone_url
     clone_url=$(echo "$body" | jq -r --arg s "$repo_slug" '.values[] | select(.slug==$s) | .links.clone[] | select(.name=="http") | .href')
     if [[ -z "$clone_url" ]]; then
@@ -539,7 +539,7 @@ check_and_clone_new_repos() {
 }
 
 # ==============================================================================
-# CLASIFICACIÓN DE ERRORES DE GIT
+# GIT ERROR CLASSIFICATION
 # ==============================================================================
 classify_git_failure() {
   local command_label="$1"
@@ -551,7 +551,7 @@ classify_git_failure() {
   lower_output=$(printf '%s' "$output" | tr '[:upper:]' '[:lower:]')
   quoted_repo=$(shell_quote "$repo")
 
-  # 1. Detección prioritaria de CAPTCHA / cuenta bloqueada
+  # 1. High-priority detection of CAPTCHA / account lock
   if [[ "$lower_output" =~ captcha\ required || "$lower_output" =~ account\ has\ been\ locked || "$lower_output" =~ captcharequired ]]; then
     set_error_result \
       "Cuenta de Bitbucket bloqueada por CAPTCHA durante '$command_label'." \
@@ -621,7 +621,7 @@ Corrige el problema y vuelve a ejecutar el script." \
 }
 
 # ==============================================================================
-# VALIDACIÓN LOCAL Y ACTUALIZACIÓN DEL REPOSITORIO
+# LOCAL VALIDATION AND REPOSITORY UPDATE
 # ==============================================================================
 collect_local_blockers() {
   local repo="$1"
@@ -760,7 +760,7 @@ process_repo() {
 
   reset_current_result
 
-  # Validar que sea un repositorio real con working tree (evita falsos positivos como la raiz)
+  # Validate that it is a real repo with a working tree (avoids false positives like root dir)
   if ! git -C "$repo" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     set_error_result "La ruta detectada no es un repositorio Git valido." "Verifica la ruta o elimina la carpeta .git vacia/danada."
     return 0
@@ -798,7 +798,7 @@ process_repo() {
     return 0
   fi
 
-  # Ejecución de fetch
+  # Execute fetch
   fetch_output=$(git -C "$repo" fetch --all --prune 2>&1)
   if (($? != 0)); then
     classify_git_failure "fetch --all --prune" "$repo" "$fetch_output"
@@ -813,7 +813,7 @@ process_repo() {
     return 0
   fi
 
-  # Ejecución de pull --ff-only
+  # Execute pull --ff-only
   pull_output=$(git -C "$repo" pull --ff-only 2>&1)
   if (($? != 0)); then
     classify_git_failure "pull --ff-only" "$repo" "$pull_output"
@@ -825,7 +825,7 @@ process_repo() {
 }
 
 # ==============================================================================
-# IMPRESIÓN Y REGISTRO DE RESULTADOS
+# RESULT PRINTING AND LOGGING
 # ==============================================================================
 format_report() {
   local repo="$1"
@@ -933,7 +933,7 @@ print_summary() {
 }
 
 # ==============================================================================
-# BARRIDO Y EJECUCIÓN PRINCIPAL
+# MAIN SCAN AND EXECUTION
 # ==============================================================================
 main() {
   echo -e "${BOLD}Directorio base:${NC} $BASE_DIR"
@@ -946,7 +946,7 @@ main() {
   for project in "${TARGET_PROJECTS[@]}"; do
     local proj_dir="$BASE_DIR/$project"
     
-    # 1. Comprobar y clonar nuevos repos si está solicitado
+    # 1. Check and clone new repos if requested
     if ((CLONE_NEW)); then
       check_and_clone_new_repos "$project"
       if ((CAPTCHA_ABORT)); then
@@ -955,7 +955,7 @@ main() {
       fi
     fi
 
-    # 2. Descubrir repos locales dentro del proyecto (excluyendo $BASE_DIR y .git corruptos)
+    # 2. Discover local repos inside project (excluding $BASE_DIR and corrupt .git entries)
     local -a repos=()
     local git_entry
     local repo_path
@@ -963,9 +963,9 @@ main() {
     while IFS= read -r git_entry; do
       [[ -n "$git_entry" ]] || continue
       repo_path=$(dirname "$git_entry")
-      # Excluir la raíz y validar que sea un working tree real
+      # Exclude root and validate that it is a real working tree
       if [[ "$repo_path" != "$BASE_DIR" ]] && git -C "$repo_path" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        # Filtrar por servicio si aplica
+        # Filter by service if applicable
         if [[ -n "$SERVICE_FILTER" && "$(basename "$repo_path")" != *"$SERVICE_FILTER"* ]]; then
           continue
         fi
@@ -983,7 +983,7 @@ main() {
       print_current_result
       record_result "$repo"
 
-      # Si se detecta bloqueo por CAPTCHA, consultar o abortar para no seguir bloqueando la cuenta
+      # If CAPTCHA lockout is detected, abort to avoid further account lockout
       if ((CAPTCHA_ABORT)); then
         echo -e "\n${BOLD}${RED}⚠️ Deteniendo la ejecución para no prolongar el bloqueo de tu cuenta Bitbucket.${NC}"
         echo -e "${YELLOW}Por favor, resuelve el CAPTCHA en https://${SERVER} antes de reintentar.${NC}"

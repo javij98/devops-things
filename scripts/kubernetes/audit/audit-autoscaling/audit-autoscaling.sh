@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Script de auditoría de HorizontalPodAutoscaler (HPA) vs Deployments en K8s
-# Verifica el cumplimiento de la regla corporativa de autoescalado al 80%:
+# Audit script for HorizontalPodAutoscaler (HPA) vs Deployments in K8s
+# Validates compliance with the corporate 80% autoscaling rule:
 #   target_cpu    = ceil(80 * limits.cpu / requests.cpu)
 #   target_memory = ceil(80 * limits.memory / requests.memory)
 # ==============================================================================
 
 set -o pipefail
 
-# Colores y formatos (solo si la salida es terminal interactivo)
+# Colors and formats (only if output is an interactive terminal)
 if [ -t 1 ]; then
   BOLD="\033[1m"
   GREEN="\033[0;32m"
@@ -27,7 +27,7 @@ else
   NC=""
 fi
 
-# Variables por defecto
+# Default variables
 ENTORNO=""
 PROYECTO="apijo"
 SERVICE_FILTER=""
@@ -47,7 +47,7 @@ Si se ejecuta sin parámetros, el script entrará en ${BOLD}modo interactivo gui
   exit 0
 }
 
-# Parseo de argumentos con flags si se proporcionan
+# Argument parsing with flags if provided
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -e|--entorno)
@@ -85,7 +85,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # ==============================================================================
-# MODO INTERACTIVO (si no se proporcionó entorno)
+# INTERACTIVE MODE (if environment was not provided)
 # ==============================================================================
 if [ -z "$ENTORNO" ]; then
   echo -e "${BOLD}${CYAN}======================================================================${NC}"
@@ -93,7 +93,7 @@ if [ -z "$ENTORNO" ]; then
   echo -e "${BOLD}${CYAN}======================================================================${NC}"
   echo ""
   
-  # 1. Pregunta Entorno
+  # 1. Prompt Environment
   echo -e "${BOLD}1) Selecciona el entorno que deseas auditar:${NC}"
   echo "   1) Desarrollo  (des) [contexto: desarrollo]"
   echo "   2) Integración (int) [contexto: integracion]"
@@ -112,19 +112,19 @@ if [ -z "$ENTORNO" ]; then
   esac
   echo ""
 
-  # 2. Pregunta Proyecto / Aplicación
+  # 2. Prompt Project / Application
   read -r -p "2) Proyecto / Aplicación [ENTER para '${PROYECTO}']: " input_proj
   if [ -n "$input_proj" ]; then
     PROYECTO="$input_proj"
   fi
   echo ""
 
-  # 3. Pregunta Filtro por microservicio
+  # 3. Prompt Microservice filter
   read -r -p "3) Filtrar por microservicio (opcional, ENTER para revisar todos): " input_svc
   SERVICE_FILTER="$input_svc"
   echo ""
 
-  # 4. Pregunta Modo de visualización
+  # 4. Prompt Display mode
   echo -e "${BOLD}4) ¿Qué resultados deseas visualizar en la tabla?${NC}"
   echo "   1) Solo discrepancias / errores (Recomendado)"
   echo "   2) Todos los microservicios (incluyendo OK)"
@@ -138,7 +138,7 @@ if [ -z "$ENTORNO" ]; then
 fi
 
 # ==============================================================================
-# FUNCIÓN DE AUDITORÍA POR ENTORNO
+# AUDIT FUNCTION PER ENVIRONMENT
 # ==============================================================================
 auditar_entorno() {
   local env_code="$1"
@@ -160,7 +160,7 @@ auditar_entorno() {
   fi
   echo -e "${BOLD}${BLUE}=========================================================================================================${NC}"
 
-  # Exportar variables para el motor de auditoría en Python
+  # Export variables for Python audit engine
   export AUDIT_CTX="$ctx"
   export AUDIT_NS="$ns"
   export AUDIT_SVC="$SERVICE_FILTER"
@@ -180,7 +180,7 @@ ns = os.environ.get("AUDIT_NS", "")
 svc_filter = os.environ.get("AUDIT_SVC", "").strip().lower()
 show_all = os.environ.get("AUDIT_SHOW_ALL", "false").lower() in ("true", "1", "yes")
 
-# Colores ANSI
+# ANSI Colors
 is_tty = sys.stdout.isatty()
 C_RED = "\033[0;31m" if is_tty else ""
 C_GREEN = "\033[0;32m" if is_tty else ""
@@ -215,7 +215,7 @@ def parse_mem(m):
     except ValueError:
         return 0.0
 
-# 1. Obtener HPAs
+# 1. Fetch HPAs
 try:
     hpa_res = subprocess.run(
         ["kubectl", "--context", ctx, "get", "hpa", "-n", ns, "-o", "json"],
@@ -238,7 +238,7 @@ if not hpa_items:
     print(f"Nota: Si es entorno de desarrollo, es normal al estar el autoescalado desactivado.\n")
     sys.exit(0)
 
-# 2. Obtener Deployments
+# 2. Fetch Deployments
 try:
     dep_res = subprocess.run(
         ["kubectl", "--context", ctx, "get", "deployments", "-n", ns, "-o", "json"],
@@ -258,7 +258,7 @@ for hpa in hpa_items:
     hpa_name = hpa["metadata"]["name"]
     target_ref = hpa["spec"].get("scaleTargetRef", {}).get("name", "")
     
-    # Filtrar por servicio si el usuario lo especificó
+    # Filter by service if specified by user
     if svc_filter and (svc_filter not in hpa_name.lower() and svc_filter not in target_ref.lower()):
         continue
 
@@ -271,7 +271,7 @@ for hpa in hpa_items:
     if not containers:
         continue
 
-    # Seleccionar contenedor principal (nombre afín o el primero)
+    # Select main container (matching name or first one)
     c_selected = containers[0]
     for c in containers:
         c_name = c.get("name", "")
@@ -324,7 +324,7 @@ for hpa in hpa_items:
             "is_error": is_error
         })
 
-# Renderizar tabla
+# Render table
 col_svc = 30
 col_cpu_res = 13
 col_cpu_tgt = 18
@@ -360,7 +360,7 @@ for r in sorted(rows, key=lambda x: x["target"]):
     if r["diff_mem"]:
         mem_tgt = f"{C_YELLOW}{mem_tgt}{C_RESET}"
 
-    # Ajuste de longitud por códigos de escape
+    # Length adjustment for escape codes
     svc_name = r["target"]
     if len(svc_name) > col_svc:
         svc_name = svc_name[:col_svc - 2] + ".."
@@ -382,7 +382,7 @@ EOF
 }
 
 # ==============================================================================
-# EJECUCIÓN PRINCIPAL
+# MAIN EXECUTION
 # ==============================================================================
 if [ "$ENTORNO" = "all" ] || [ "$ENTORNO" = "todos" ]; then
   for e in des int act pro; do

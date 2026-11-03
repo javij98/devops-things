@@ -1,22 +1,22 @@
 # Kubernetes Secret Copier
 
-Script de administración para clonar un `Secret` de Kubernetes entre namespaces.
+Administration script to replicate a Kubernetes `Secret` between namespaces.
 
-## 📋 Descripción
+## 📋 Description
 
-`copy-secrets.sh` extrae la definición de un secreto existente en un namespace de origen, elimina metadatos dinámicos del clúster (`creationTimestamp`, `resourceVersion`, `uid`) y lo aplica en el namespace de destino.
+`copy-secrets.sh` extracts an existing secret definition from a source namespace, strips dynamic cluster metadata (`creationTimestamp`, `resourceVersion`, `uid`), and applies it into the destination namespace.
 
-## 🛠️ Requisitos
+## 🛠️ Prerequisites
 
-- `kubectl` con permisos para leer en el namespace de origen y crear/actualizar secretos en el namespace de destino.
+- `kubectl` configured with read permissions in the source namespace and create/update permissions in the target namespace.
 
-## 🚀 Uso
+## 🚀 Usage
 
 ```bash
 ./copy-secrets.sh <source_namespace> <destination_namespace> <secret_name>
 ```
 
-### Ejemplo
+### Example
 
 ```bash
 ./copy-secrets.sh default app-prod db-credentials

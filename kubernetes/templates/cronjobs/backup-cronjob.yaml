@@ -10,7 +10,7 @@ spec:
     spec:
       template:
         spec:
-          restartPolicy: {{ .Values.restartPolicy }}  # Asegúrate de tenerlo definido
+          restartPolicy: {{ .Values.restartPolicy }}  # Ensure restartPolicy is defined
           {{- if .Values.useVolumes }}
           volumes:
           - name: "backup-script-volume"
@@ -21,8 +21,8 @@ spec:
                 path: "mongo-backup-script.sh"
           {{- end }}
           containers:
-          - name: "{{ .Values.nameOverride }}"  # Usar nameOverride como nombre
-            image: "{{ .Values.image }}"  # Usa image desde values.yaml
+          - name: "{{ .Values.nameOverride }}"  # Use nameOverride as container name
+            image: "{{ .Values.image }}"  # Use image from values.yaml
             command: {{ toJson .Values.command }}
             env:
             {{- range $index, $commonEnv := .Values.commonEnv }}

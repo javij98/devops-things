@@ -1,66 +1,45 @@
 # Clone Bitbucket Repository Script
 
-Script bash (`clone-bitbucket-repo.sh`) para clonar automáticamente todos los repositorios de un proyecto en Bitbucket Server (bitbucket.once.es).
+Bash script (`clone-bitbucket-repo.sh`) to automatically batch-clone all repositories of a project hosted on Bitbucket Server (`bitbucket.once.es`).
 
-## 📋 Descripción
+## 📋 Description
 
-Este script automatiza la tarea de clonar múltiples repositorios de un proyecto de Bitbucket. Sus principales características son:
+This script automates cloning multiple repositories belonging to a Bitbucket project. Key features include:
 
-* **Interactivo:** Solicita usuario, contraseña (de forma segura/oculta) y nombre del proyecto al ejecutarlo.
-* **Seguro:** Valida que estés ejecutando el script en un directorio que coincida con el nombre del proyecto (para evitar clonar en lugares equivocados).
-* **Resiliente:** Detecta repositorios ya existentes y los salta, evitando errores o sobreescrituras accidentales.
+* **Interactive:** Safely prompts for username, masked password, and project key.
+* **Safe:** Validates that the current working directory matches the target project name to prevent cloning in unintended paths.
+* **Resilient:** Detects already cloned repositories and skips them, preventing unintentional overwrites.
 
-**Servidor:** `bitbucket.once.es`
+## 🛠️ Prerequisites
 
-## 🛠️ Requisitos previos
-
-El entorno donde se ejecute debe tener instalado:
-
-* `git`: Para clonar los repositorios.
-* `curl`: Para realizar las peticiones a la API de Bitbucket.
-* `jq`: Para procesar las respuestas JSON de la API.
+- `git`
+- `curl`
+- `jq`
 
 ```bash
-# Ejemplo instalación en Debian/Ubuntu
+# Debian / Ubuntu installation
 sudo apt-get install git curl jq
 ```
 
-## 🚀 Uso
+## 🚀 Usage
 
-1. **Ejecuta el script:**
+1. **Run the script:**
 
-    ```bash
-    ./<directorio-script>/clone-bitbucket-repo.sh
-    ```
+   ```bash
+   ./clone-bitbucket-repo.sh
+   ```
 
-2. **Sigue las instrucciones en pantalla:**
+2. **Follow on-screen prompts:**
+   - **User:** Your Bitbucket username.
+   - **Password:** Your Bitbucket password / token.
+   - **Project:** The project key in Bitbucket (e.g. `OCP-INFORMES`).
 
-    * **Usuario:** Tu usuario de Bitbucket/LDAP.
-    * **Contraseña:** Tu contraseña de Bitbucket/LDAP.
-    * **Proyecto:** El código del proyecto en Bitbucket (ej: `OCP-INFORMES`).
+3. **Directory Safety Validation:**
+   If the current working directory does not match the project name, the script prompts for confirmation before proceeding.
 
-3. **Validación de Seguridad:**
+## ⚠️ Error Handling
 
-    Si el directorio actual no contiene el nombre del proyecto (ignorando mayúsculas y prefijos como 'ocp-'), el script te mostrará una advertencia y pedirá confirmación antes de continuar.
-
-    > **Ejemplo:**
-    Si el proyecto es `OCP-INFORMES` y estás en la carpeta `~/tmp/pruebas`, el script te avisará. Si estás en `~/workspace/ocp-informes`, continuará automáticamente.
-
-## ⚠️ Manejo de errores
-
-El script maneja y notifica los siguientes casos:
-
-* **Error 401:** Credenciales inválidas.
-* **Error 404:** El proyecto no existe.
-* **Error 403:** No tienes permisos ver el proyecto.
-* **Directorios existentes:** Si encuentra una carpeta con el mismo nombre que un repo:
-  * Si es un repo git: Lo salta e informa.
-  * Si NO es un repo git: Lo salta y emite una advertencia.
-
-## 🤵 Personalización
-
-Puedes modificar el servidor mediante la variable global `SERVER="bitbucket.once.es"` que se encuentra al inicio del archivo.
-
-## 📞 Soporte
-
-Para más información o reportar problemas, contactar con el equipo **GSA Devops**.
+- **HTTP 401:** Invalid credentials.
+- **HTTP 404:** Project not found.
+- **HTTP 403:** Insufficient permissions to view the project.
+- **Existing directories:** Skips existing Git repositories and warns about non-git folders.
