@@ -1,0 +1,22 @@
+# Minimal prompt: current directory and Git branch/status only.
+format = """[╭─](#89b4fa)$directory$git_branch$git_status$line_break[╰─](#89b4fa)$character"""
+add_newline = true
+
+[directory]
+style = "bold #89b4fa"
+format = "[$path]($style) "
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+style = "bold #cba6f7"
+format = "on [$symbol$branch]($style) "
+
+[git_status]
+style = "bold #f38ba8"
+format = "([$all_status$ahead_behind]($style) )"
+
+[character]
+success_symbol = "[❯](bold #a6e3a1)"
+error_symbol = "[❯](bold #f38ba8)"

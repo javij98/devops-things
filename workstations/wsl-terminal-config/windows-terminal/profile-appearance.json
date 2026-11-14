@@ -1,0 +1,13 @@
+{
+  "colorScheme": "Catppuccin Mocha",
+  "font": {
+    "face": "CaskaydiaCove Nerd Font Mono",
+    "size": 12.5
+  },
+  "padding": "12, 12, 12, 12",
+  "cursorShape": "bar",
+  "cursorColor": "#F5E0DC",
+  "useAcrylic": true,
+  "opacity": 95,
+  "tabColor": "#89B4FA"
+}

@@ -1,6 +1,6 @@
 # DevOps Things
 
-Centralized repository containing operational automation scripts, utilities, and Kubernetes templates for infrastructure administration, auditing, and monitoring.
+Centralized repository containing operational automation scripts, utilities, Kubernetes templates, and developer workstation configurations.
 
 ## 📁 Repository Structure
 
@@ -11,6 +11,8 @@ devops-things/
 │       ├── configMaps/           # ConfigMap templates (e.g. backup scripts)
 │       ├── cronjobs/             # CronJob templates (e.g. database backup jobs)
 │       └── pods/                 # Utility pods for administration (e.g. AWS CLI)
+├── workstations/                 # Reusable developer workstation configurations
+│   └── wsl-terminal-config/      # WSL + Windows Terminal visual setup
 └── scripts/                      # Collection of operational automation scripts
     ├── git/                      # Git and SCM automation tools
     │   ├── clone-bitbucket-repo/ # Interactive batch cloning by Bitbucket project
@@ -22,6 +24,9 @@ devops-things/
 ```
 
 ## 🛠️ Components
+
+### Workstation Configurations
+- **[wsl-terminal-config](workstations/wsl-terminal-config/):** Minimal WSL + Windows Terminal styling with Catppuccin Mocha, a Nerd Font, and a Git-only Starship prompt.
 
 ### Git & SCM Scripts
 - **[clone-bitbucket-repo](scripts/git/clone-bitbucket-repo/):** Interactive script to clone all repositories within a Bitbucket project.
