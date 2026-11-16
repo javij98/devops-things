@@ -1,120 +1,261 @@
 # WSL Terminal Configuration
 
-A small, portable visual setup for **Windows Terminal + WSL Ubuntu + Zsh**. It keeps the prompt deliberately minimal: current directory, Git branch/status, and the prompt character only.
+[![Language: Spanish](https://img.shields.io/badge/Language-Spanish-yellow.svg)](README.es.md)
+[![Status: Verified](https://img.shields.io/badge/Status-Verified-brightgreen.svg)](#verification)
 
-## What this config includes
+A portable, aesthetic visual setup for **Windows Terminal + WSL Ubuntu + Zsh**. It provides a clean, two-line **Catppuccin Mocha** terminal theme with a minimal Starship prompt (current directory, Git branch & status, and prompt character).
 
-- Starship prompt with a restrained two-line Catppuccin Mocha style.
-- Current directory plus Git branch and working-tree status.
-- CaskaydiaCove Nerd Font Mono, required for the branch glyph.
-- Catppuccin Mocha Windows Terminal color scheme.
-- Profile-level font size, spacing, cursor, tab accent, and subtle acrylic transparency.
+---
 
-It does **not** add Kubernetes, cloud, Terraform, Node/Python version, or command-duration prompt modules. No font binaries, personal `.zshrc`, full Windows Terminal settings file, profile GUIDs, aliases, or credentials are stored here.
+## Table of Contents
 
-Verified with WSL Ubuntu 24.04, Zsh 5.9, Starship 1.27.0, and Nerd Fonts `v3.5.1`.
+1. [Features](#features)
+2. [What is Automated vs. What is Manual](#what-is-automated-vs-what-is-manual)
+3. [Quick Start (Automated Installation)](#quick-start-automated-installation)
+4. [Step-by-Step Manual Installation](#step-by-step-manual-installation)
+   - [Step 1: Install Ubuntu / WSL Prerequisites](#step-1-install-ubuntu--wsl-prerequisites)
+   - [Step 2: Install Nerd Font on Windows](#step-2-install-nerd-font-on-windows)
+   - [Step 3: Install Starship Prompt](#step-3-install-starship-prompt)
+   - [Step 4: Copy Prompt Configuration](#step-4-copy-prompt-configuration)
+   - [Step 5: Setup Oh My Zsh and ~/.zshrc](#step-5-setup-oh-my-zsh-and-zshrc)
+   - [Step 6: Configure Windows Terminal](#step-6-configure-windows-terminal)
+   - [Step 7: Set Zsh as Default Shell](#step-7-set-zsh-as-default-shell)
+5. [Verification & Automated Tests](#verification--automated-tests)
+6. [Troubleshooting & FAQ](#troubleshooting--faq)
+7. [Directory Structure](#directory-structure)
 
-## Files
+---
 
-- `starship.toml` — portable Starship prompt configuration.
-- `zsh/omz-theme-setting.zsh` — the Oh My Zsh theme setting to use before loading Oh My Zsh.
-- `zsh/starship-init.zsh` — the Starship initialization line to add at the end of `.zshrc`.
-- `windows-terminal/catppuccin-mocha.json` — the color-scheme object to merge into Windows Terminal's `schemes` array.
-- `windows-terminal/profile-appearance.json` — appearance properties to merge into the WSL profile object.
+## Features
 
-## Step-by-step installation
+- **Prompt**: Two-line minimal Starship layout styled with Catppuccin Mocha colors.
+- **Git Integration**: Fast Git branch name, glyph (``), and dirty/ahead/behind status indicators.
+- **Typography**: CaskaydiaCove Nerd Font Mono (Cascadia Code patched with developer glyphs).
+- **Windows Terminal**: Full Catppuccin Mocha color palette, modern bar cursor, padding, acrylic background blur (95% opacity), and custom tab accents.
+- **Shell Compatibility**: Full Oh My Zsh support with safe migration of your existing `.bashrc` aliases and environment variables.
 
-### 1. Get the configuration
+---
 
-Clone the `devops-things` repository using your normal GitHub access, then enter this directory:
+## What is Automated vs. What is Manual
+
+Windows and WSL operate under distinct security and permission boundaries. Here is the exact breakdown:
+
+| Step / Component | Automated via `scripts/install.sh`? | Manual Action Needed? | Notes & Permissions |
+| :--- | :---: | :---: | :--- |
+| **Prerequisites** (`zsh`, `curl`, `tar`, `git`) | **Yes** | Sudo password prompt | Prompts for your Ubuntu password if any package is missing. |
+| **Starship CLI** | **Yes** | None | Installs cleanly to `~/.local/bin/starship` (no root required). |
+| **Prompt Config** (`starship.toml`) | **Yes** | None | Deployed to `~/.config/starship.toml`. |
+| **Oh My Zsh & `.zshrc`** | **Yes** | None | Clones OMZ, creates timestamped `.zshrc.bak`, configures `ZSH_THEME=""` and imports aliases. |
+| **Download Nerd Fonts** | **Yes** | None | Downloads v3.5.1 and extracts to your Windows `Downloads\CascadiaCode-NerdFont` folder. |
+| **Install Fonts on Windows** | **No** | **Yes (1-click)** | Windows security requires right-clicking the 4 `.ttf` files and choosing **Install**. |
+| **Windows Terminal Settings** | **Yes** | None | Locates your Windows `settings.json`, backs it up, and merges the color scheme & profile appearance. |
+| **Set Zsh as Default Shell** | **Guided** | **Yes (1 command)** | Run `chsh -s $(which zsh)` to switch your default login shell from bash to zsh. |
+| **Terminal Reload** | **No** | **Yes** | Close and reopen Windows Terminal so DirectWrite detects the newly installed fonts. |
+
+---
+
+## Quick Start (Automated Installation)
+
+If you are using WSL Ubuntu, you can run the automated installer directly from this folder:
 
 ```bash
-cd devops-things/workstations/wsl-terminal-config
+cd workstations/wsl-terminal-config
+./scripts/install.sh
 ```
 
-If you already have the repository, pull the latest version before continuing. Access to the repository is required if it is private.
+The script will:
+1. Verify base packages (`curl`, `tar`, `git`, `zsh`) and install any missing packages via `sudo apt`.
+2. Install Starship to `~/.local/bin/starship`.
+3. Copy `starship.toml` into `~/.config/starship.toml`.
+4. Install Oh My Zsh and set up `~/.zshrc`.
+5. Download and extract the 4 `CaskaydiaCove Nerd Font Mono` font files directly into your Windows `Downloads\CascadiaCode-NerdFont` directory.
+6. Automatically locate and update your Windows Terminal `settings.json` with the Catppuccin Mocha scheme and profile appearance.
 
-### 2. Install the Nerd Font on Windows
+### Remaining manual actions after running the script:
+1. **Install fonts in Windows**: Open File Explorer in Windows, navigate to `Downloads\CascadiaCode-NerdFont`, select the 4 `.ttf` files, right-click and click **Install**.
+2. **Switch default shell** (if not already done):
+   ```bash
+   chsh -s $(which zsh)
+   ```
+3. **Restart Windows Terminal**: Close Windows Terminal completely and reopen it.
 
-The font must be installed on the **Windows host** because Windows Terminal renders the glyphs.
+To verify your installation at any time, run:
+```bash
+./scripts/verify.sh
+```
 
-1. Download `CascadiaCode.tar.xz` from the [latest Nerd Fonts release](https://github.com/ryanoasis/nerd-fonts/releases/latest). The configuration was verified with release `v3.5.1`.
-2. Extract the archive (for example, with 7-Zip).
-3. Install these four font files for your Windows user: `CaskaydiaCoveNerdFontMono-Regular.ttf`, `CaskaydiaCoveNerdFontMono-Bold.ttf`, `CaskaydiaCoveNerdFontMono-Italic.ttf`, and `CaskaydiaCoveNerdFontMono-BoldItalic.ttf`.
-4. In Windows Terminal, the font family name is **`CaskaydiaCove Nerd Font Mono`**.
+---
 
-Do not add the font binaries to this repository; download them from the upstream release when setting up another computer.
+## Step-by-Step Manual Installation
 
-### 3. Install Starship in WSL
+If you prefer to perform every step by hand, or if you are setting up a machine with restricted script execution, follow these instructions:
 
-Run these commands in Ubuntu/WSL. Installing into `~/.local/bin` avoids needing a system-wide install:
+### Step 1: Install Ubuntu / WSL Prerequisites
+
+Open your WSL terminal and ensure the essential packages are present:
+
+```bash
+sudo apt update
+sudo apt install -y zsh curl tar git
+```
+
+### Step 2: Install Nerd Font on Windows
+
+Windows Terminal runs as a native Windows application, so the font glyphs must be installed on the **Windows host system**:
+
+1. Download `CascadiaCode.tar.xz` from the [official Nerd Fonts release v3.5.1](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/CascadiaCode.tar.xz).
+2. Extract the archive (using 7-Zip or tar).
+3. Select and install the following four font files:
+   - `CaskaydiaCoveNerdFontMono-Regular.ttf`
+   - `CaskaydiaCoveNerdFontMono-Bold.ttf`
+   - `CaskaydiaCoveNerdFontMono-Italic.ttf`
+   - `CaskaydiaCoveNerdFontMono-BoldItalic.ttf`
+4. Right-click the selected files and click **Install** (or **Install for all users**).
+5. The registered font family name recognized by Windows Terminal is: **`CaskaydiaCove Nerd Font Mono`**.
+
+### Step 3: Install Starship Prompt
+
+Run the official user-space installation command inside WSL:
 
 ```bash
 mkdir -p "$HOME/.local/bin"
 curl -fsSL https://starship.rs/install.sh -o /tmp/starship-install.sh
-less /tmp/starship-install.sh
 sh /tmp/starship-install.sh --yes --bin-dir "$HOME/.local/bin"
 ```
 
-The script is downloaded from the official [Starship installation page](https://starship.rs/guide/); review it before running. If `less` is unavailable, open the file in your preferred text viewer. Ensure `~/.local/bin` is in your shell's `PATH`; add this line to `~/.zshrc` if needed:
-
-```zsh
+Ensure `~/.local/bin` is in your `PATH` by adding this line to your shell configuration if necessary:
+```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Verify the executable:
+### Step 4: Copy Prompt Configuration
 
-```bash
-starship --version
-```
-
-### 4. Install the prompt configuration
-
-From this directory, copy the config into Starship's standard location:
+Copy the custom Starship configuration into Starship's canonical config folder:
 
 ```bash
 mkdir -p "$HOME/.config"
 cp starship.toml "$HOME/.config/starship.toml"
 ```
 
-The custom `format` names only `directory`, `git_branch`, `git_status`, and `character`; it intentionally avoids Starship's other context modules.
+### Step 5: Setup Oh My Zsh and ~/.zshrc
 
-### 5. Enable Starship in Zsh
+1. If Oh My Zsh is not yet installed:
+   ```bash
+   git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+   ```
 
-This setup assumes Zsh with Oh My Zsh. If they are not installed, install Zsh using your Linux distribution's package manager and follow the [official Oh My Zsh installation instructions](https://github.com/ohmyzsh/ohmyzsh/wiki).
+2. Configure `~/.zshrc`:
+   - Set the Oh My Zsh theme to empty before loading OMZ (`zsh/omz-theme-setting.zsh`):
+     ```zsh
+     ZSH_THEME=""
+     ```
+   - Source Oh My Zsh:
+     ```zsh
+     source $ZSH/oh-my-zsh.sh
+     ```
+   - Add your existing environment variables, tools (`nvm`, `pyenv`, `kubeconfig`, SDKMAN), and aliases from `.bashrc`.
+   - At the **very end** of `~/.zshrc`, add the Starship hook (`zsh/starship-init.zsh`):
+     ```zsh
+     eval "$(starship init zsh)"
+     ```
 
-1. In `~/.zshrc`, replace the existing `ZSH_THEME=...` assignment with the contents of `zsh/omz-theme-setting.zsh` (`ZSH_THEME=""`). Keep it **before** the line that loads Oh My Zsh.
-2. Preserve your existing plugins and other aliases.
-3. Add the contents of `zsh/starship-init.zsh` at the very end of `~/.zshrc`, after Oh My Zsh and any later prompt configuration.
-4. Start a new Zsh session, or run `source ~/.zshrc`.
+### Step 6: Configure Windows Terminal
 
-### 6. Apply the Windows Terminal colors and profile appearance
-
-1. Open Windows Terminal settings with **Ctrl+,**, then choose **Open JSON file**.
-2. In the top-level `schemes` array, add the complete object from `windows-terminal/catppuccin-mocha.json`. Keep any existing schemes and ensure the commas are valid.
-3. In `profiles.list`, find the Ubuntu profile that launches WSL on your machine. Profile GUIDs differ between computers; do not copy a GUID from another installation.
-4. Merge the properties from `windows-terminal/profile-appearance.json` into that profile object. Do not replace the whole settings file or put these settings in `profiles.defaults` unless you want the appearance applied to every profile.
-5. Save the file. Open a new WSL tab; if Windows Terminal was already running when the font was installed, close and reopen Windows Terminal so it can enumerate the new font. There is no need to restart WSL.
-
-The checked-in appearance fragment is valid JSON, but it is intentionally a set of profile properties rather than a complete Windows Terminal `settings.json` file.
-
-### 7. Verify
-
-Open a new WSL/Zsh session and run:
+You can apply the configuration automatically with the included Python helper:
 
 ```bash
-starship --version
-starship prompt
+python3 scripts/apply-windows-terminal-settings.py
 ```
 
-Inside a Git repository, the prompt should show its directory, branch, and any working-tree status. Outside a Git repository, it should show only the directory and prompt character. The branch icon should render correctly when the Windows Terminal profile uses the specified Nerd Font family.
+Or manually:
+1. In Windows Terminal, press `Ctrl+,` and click **Open JSON file** (bottom left).
+2. Under `"schemes": [ ... ]`, paste the color scheme object from [windows-terminal/catppuccin-mocha.json](windows-terminal/catppuccin-mocha.json).
+3. Under `"profiles": { "list": [ ... ] }`, locate your Ubuntu profile (check `"name": "Ubuntu"` or your default profile GUID).
+4. Merge the appearance properties from [windows-terminal/profile-appearance.json](windows-terminal/profile-appearance.json):
+   ```json
+   "colorScheme": "Catppuccin Mocha",
+   "font": {
+       "face": "CaskaydiaCove Nerd Font Mono",
+       "size": 12.5
+   },
+   "padding": "12, 12, 12, 12",
+   "cursorShape": "bar",
+   "cursorColor": "#F5E0DC",
+   "useAcrylic": true,
+   "opacity": 95,
+   "tabColor": "#89B4FA"
+   ```
+5. Save the file.
 
-## Updating
+### Step 7: Set Zsh as Default Shell
 
-Pull changes to this directory and repeat the relevant copy/merge steps. To update Starship or the font, use their upstream release/install pages rather than committing binaries here.
+Change your default login shell to Zsh:
 
-## Upstream projects
+```bash
+chsh -s $(which zsh)
+```
 
-- [Starship](https://github.com/starship/starship) — prompt engine and official installer.
-- [Nerd Fonts](https://github.com/ryanoasis/nerd-fonts) — patched Cascadia/Caskaydia font files.
-- [Catppuccin for Windows Terminal](https://github.com/catppuccin/windows-terminal) — Mocha color palette.
+Close Windows Terminal and open a new window.
+
+---
+
+## Verification & Automated Tests
+
+A dedicated test suite is provided in `scripts/verify.sh` to validate all aspects of your installation:
+
+```bash
+./scripts/verify.sh
+```
+
+The script verifies 13 critical checkpoints:
+- [x] Zsh binary availability and version
+- [x] Default user shell in `/etc/passwd`
+- [x] Starship binary location and version
+- [x] `~/.config/starship.toml` syntax and module presence
+- [x] Oh My Zsh directory structure
+- [x] `~/.zshrc` theme override (`ZSH_THEME=""`)
+- [x] Starship initialization hook in `~/.zshrc`
+- [x] Zsh syntax validation (`zsh -n ~/.zshrc`)
+- [x] Installed `CaskaydiaCove Nerd Font Mono` TTF files on Windows
+- [x] Catppuccin Mocha scheme in Windows Terminal `settings.json`
+- [x] CaskaydiaCove font family assigned to Ubuntu profile
+- [x] Interactive prompt rendering test with Git status glyphs
+
+---
+
+## Troubleshooting & FAQ
+
+#### 1. The Git branch symbol shows up as a square `[?]` or broken character.
+* **Cause**: Windows Terminal is not using the patched Nerd Font, or Windows Terminal was not restarted after font installation.
+* **Fix**: Ensure you installed the 4 `.ttf` font files in Windows, and restart Windows Terminal completely. Check that Windows Terminal settings have `"face": "CaskaydiaCove Nerd Font Mono"`.
+
+#### 2. Starship outputs `[ERROR] - (starship::print): Under a 'dumb' terminal`.
+* **Cause**: Occurs only in non-interactive IDE output windows or subshells where `$TERM` defaults to `dumb`.
+* **Fix**: Normal interactive shells in Windows Terminal automatically set `TERM=xterm-256color`. You can test it with `TERM=xterm-256color starship prompt`.
+
+#### 3. Where is `settings.json` located on Windows?
+* Standard Microsoft Store package:
+  `%LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_8wekyb3d8bbwe\LocalState\settings.json`
+* In WSL, this corresponds to:
+  `/mnt/c/Users/<YourWindowsUser>/AppData/Local/Packages/Microsoft.WindowsTerminal_8wekyb3d8bbwe/LocalState/settings.json`
+
+---
+
+## Directory Structure
+
+```text
+workstations/wsl-terminal-config/
+├── README.md                              # This document (English)
+├── README.es.md                           # Spanish documentation
+├── starship.toml                          # Minimal Starship Catppuccin prompt configuration
+├── scripts/
+│   ├── install.sh                         # Automated end-to-end installer
+│   ├── verify.sh                          # 13-point automated test suite
+│   └── apply-windows-terminal-settings.py # Safe JSON merger with backup for Windows Terminal
+├── windows-terminal/
+│   ├── catppuccin-mocha.json              # Standalone color scheme JSON
+│   └── profile-appearance.json            # Profile visual properties JSON
+└── zsh/
+    ├── omz-theme-setting.zsh              # Theme disable snippet for Oh My Zsh
+    └── starship-init.zsh                  # Shell initialization snippet
+```
