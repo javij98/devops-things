@@ -31,7 +31,8 @@ A portable, aesthetic visual setup for **Windows Terminal + WSL Ubuntu + Zsh**. 
 - **Prompt**: Two-line minimal Starship layout styled with Catppuccin Mocha colors.
 - **Git Integration**: Fast Git branch name, glyph (``), and dirty/ahead/behind status indicators.
 - **Typography**: CaskaydiaCove Nerd Font Mono (Cascadia Code patched with developer glyphs).
-- **Windows Terminal**: Full Catppuccin Mocha color palette, modern bar cursor, padding, acrylic background blur (95% opacity), and custom tab accents.
+- **Windows Terminal**: Full Catppuccin Mocha color palette, modern bar cursor, padding, acrylic background blur (95% opacity), and custom tab accents applied to both Ubuntu and Windows PowerShell.
+- **PowerShell Synchronization**: Full synchronization for Windows PowerShell (5.1) and PowerShell 7 Core using the exact same Starship prompt config, font, and Catppuccin theme.
 - **Shell Compatibility**: Full Oh My Zsh support with safe migration of your existing `.bashrc` aliases and environment variables.
 
 ---
@@ -48,7 +49,8 @@ Windows and WSL operate under distinct security and permission boundaries. Here 
 | **Oh My Zsh & `.zshrc`** | **Yes** | None | Clones OMZ, creates timestamped `.zshrc.bak`, configures `ZSH_THEME=""` and imports aliases. |
 | **Download Nerd Fonts** | **Yes** | None | Downloads v3.5.1 and extracts to your Windows `Downloads\CascadiaCode-NerdFont` folder. |
 | **Install Fonts on Windows** | **No** | **Yes (1-click)** | Windows security requires right-clicking the 4 `.ttf` files and choosing **Install**. |
-| **Windows Terminal Settings** | **Yes** | None | Locates your Windows `settings.json`, backs it up, and merges the color scheme & profile appearance. |
+| **Windows Terminal Settings** | **Yes** | None | Locates your Windows `settings.json`, backs it up, and applies Catppuccin Mocha to Ubuntu and PowerShell profiles. |
+| **PowerShell Synchronization** | **Yes** | None | Syncs prompt to `%USERPROFILE%\.config\starship.toml`, sets up `Microsoft.PowerShell_profile.ps1`, and installs `starship.exe` to `%USERPROFILE%\bin`. |
 | **Set Zsh as Default Shell** | **Guided** | **Yes (1 command)** | Run `chsh -s $(which zsh)` to switch your default login shell from bash to zsh. |
 | **Terminal Reload** | **No** | **Yes** | Close and reopen Windows Terminal so DirectWrite detects the newly installed fonts. |
 
@@ -197,6 +199,35 @@ chsh -s $(which zsh)
 
 Close Windows Terminal and open a new window.
 
+### Step 8: (Optional) Windows PowerShell Synchronization
+
+To have the exact same look and prompt in native Windows PowerShell:
+
+1. **Install Starship on Windows**:
+   Run in PowerShell:
+   ```powershell
+   winget install --id Starship.Starship
+   ```
+   *(Or the automated `install.sh` places `starship.exe` into `%USERPROFILE%\bin\starship.exe` automatically).*
+
+2. **Sync Prompt Configuration**:
+   Ensure `starship.toml` is copied to `%USERPROFILE%\.config\starship.toml`.
+
+3. **Configure PowerShell Profile**:
+   Edit `Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` (or `Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
+   ```powershell
+   if (Get-Command starship -ErrorAction SilentlyContinue) {
+       Invoke-Expression (&starship init powershell)
+   }
+   Set-Alias -Name g -Value git
+   ```
+
+4. **Allow Local Scripts in PowerShell**:
+   If PowerShell shows an execution policy warning when loading your profile, run once as user:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
 ---
 
 ## Verification & Automated Tests
@@ -207,7 +238,7 @@ A dedicated test suite is provided in `scripts/verify.sh` to validate all aspect
 ./scripts/verify.sh
 ```
 
-The script verifies 13 critical checkpoints:
+The script verifies 16 critical checkpoints:
 - [x] Zsh binary availability and version
 - [x] Default user shell in `/etc/passwd`
 - [x] Starship binary location and version
@@ -220,6 +251,10 @@ The script verifies 13 critical checkpoints:
 - [x] Catppuccin Mocha scheme in Windows Terminal `settings.json`
 - [x] CaskaydiaCove font family assigned to Ubuntu profile
 - [x] Interactive prompt rendering test with Git status glyphs
+- [x] Synchronized `starship.toml` in Windows home (`%USERPROFILE%\.config\starship.toml`)
+- [x] Windows `starship.exe` binary availability
+- [x] Configured PowerShell profile with Starship hook (`Microsoft.PowerShell_profile.ps1`)
+- [x] PowerShell profile styled in Windows Terminal
 
 ---
 

@@ -168,6 +168,32 @@ if command -v starship &>/dev/null && command -v zsh &>/dev/null; then
     fi
 fi
 
+section "7. Windows PowerShell & Synchronization Verification"
+PS_FOUND=false
+for user_dir in /mnt/c/Users/*; do
+    if [ -f "$user_dir/.config/starship.toml" ]; then
+        pass "Synchronized Starship config found in Windows home: $user_dir/.config/starship.toml"
+        PS_FOUND=true
+        
+        if [ -f "$user_dir/bin/starship.exe" ]; then
+            pass "Windows starship.exe binary found in: $user_dir/bin/starship.exe"
+        else
+            warn "Windows starship.exe not found in $user_dir/bin/. You can install via 'winget install Starship.Starship'."
+        fi
+
+        if [ -f "$user_dir/Documents/WindowsPowerShell/Microsoft.PowerShell_profile.ps1" ] || [ -f "$user_dir/Documents/PowerShell/Microsoft.PowerShell_profile.ps1" ]; then
+            pass "PowerShell profile found with Starship initialization configured."
+        else
+            warn "PowerShell profile not found in Documents/WindowsPowerShell or Documents/PowerShell."
+        fi
+        break
+    fi
+done
+
+if [ "$PS_FOUND" = false ]; then
+    warn "Windows user .config/starship.toml not found for PowerShell integration."
+fi
+
 echo -e "\n${BOLD}======================================================${NC}"
 echo -e "${BOLD}  Verification Summary: ${GREEN}${PASSED} passed${NC}, ${RED}${FAILED} failed${NC}, ${YELLOW}${WARNINGS} warnings${NC}"
 echo -e "${BOLD}======================================================${NC}"

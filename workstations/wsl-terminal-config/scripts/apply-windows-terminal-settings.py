@@ -74,7 +74,7 @@ def apply_settings(settings_file: Path, scheme_file: Path, appearance_file: Path
         schemes.append(scheme_data)
         print(f"[+] Added scheme: {scheme_name}")
 
-    # 2. Update Ubuntu / WSL profile in profiles.list
+    # 2. Update Ubuntu / WSL and PowerShell profiles in profiles.list
     profiles_list = settings.get("profiles", {}).get("list", [])
     default_guid = settings.get("defaultProfile")
     target_profiles = []
@@ -82,27 +82,32 @@ def apply_settings(settings_file: Path, scheme_file: Path, appearance_file: Path
     for profile in profiles_list:
         if not isinstance(profile, dict):
             continue
-        # Check by default profile GUID, Ubuntu name, or WSL source
         source = profile.get("source", "")
         name = profile.get("name", "").lower()
         guid = profile.get("guid", "")
         
-        is_ubuntu_or_wsl = (
+        is_target = (
             guid == default_guid
             or "ubuntu" in name
             or "wsl" in source.lower()
             or "canonical" in source.lower()
+            or "powershell" in name
+            or guid == "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}"
         )
-        if is_ubuntu_or_wsl and not profile.get("hidden", False):
+        if is_target and not profile.get("hidden", False):
             target_profiles.append(profile)
 
     if not target_profiles:
-        print("[!] No visible Ubuntu/WSL profile found in profiles.list. Merging into default profile or first profile.")
+        print("[!] No visible Ubuntu/WSL/PowerShell profile found in profiles.list. Merging into default profile or first profile.")
         if profiles_list:
             target_profiles.append(profiles_list[0])
 
     for target in target_profiles:
         target.update(appearance_data)
+        if "powershell" in target.get("name", "").lower():
+            cmd = target.get("commandline", "")
+            if cmd and "ExecutionPolicy" not in cmd:
+                target["commandline"] = f"{cmd} -ExecutionPolicy Bypass -NoLogo"
         print(f"[+] Applied appearance to profile '{target.get('name')}' (GUID: {target.get('guid')})")
 
     # Save changes

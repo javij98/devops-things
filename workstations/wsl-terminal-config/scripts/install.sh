@@ -211,6 +211,130 @@ download_nerd_fonts() {
     echo -e "    2. Select all 4 .ttf files -> Right click -> ${BOLD}Install${NC} (or Install for all users)"
 }
 
+setup_windows_powershell() {
+    info "Setting up Windows PowerShell integration..."
+    local win_user_dir=""
+    for user_candidate in /mnt/c/Users/*; do
+        local bname
+        bname="$(basename "$user_candidate")"
+        if [ -d "$user_candidate" ] && [ "$bname" != "Public" ] && [ "$bname" != "Default" ] && [ "$bname" != "All Users" ] && [ "$bname" != "Default User" ]; then
+            if [ -d "$user_candidate/Downloads" ] && [ -w "$user_candidate/Downloads" ]; then
+                win_user_dir="$user_candidate"
+                break
+            fi
+        fi
+    done
+
+    if [ -z "$win_user_dir" ]; then
+        warn "Could not locate active Windows user folder for PowerShell synchronization."
+        return 0
+    fi
+
+    # 1. Sync starship.toml to Windows .config
+    mkdir -p "${win_user_dir}/.config"
+    cp "${CONFIG_DIR}/starship.toml" "${win_user_dir}/.config/starship.toml"
+    success "Synchronized prompt config to Windows: ${win_user_dir}/.config/starship.toml"
+
+    # 2. Ensure starship.exe is available in Windows user bin
+    mkdir -p "${win_user_dir}/bin"
+    if [ ! -f "${win_user_dir}/bin/starship.exe" ]; then
+        info "Downloading starship.exe for Windows..."
+        local tmp_zip="/tmp/starship-windows.zip"
+        if curl -fsSL -o "$tmp_zip" "https://github.com/starship/starship/releases/latest/download/starship-x86_64-pc-windows-msvc.zip"; then
+            unzip -o "$tmp_zip" -d "${win_user_dir}/bin/" &>/dev/null
+            rm -f "$tmp_zip"
+            success "Installed starship.exe in ${win_user_dir}/bin/starship.exe"
+        else
+            warn "Could not download starship.exe automatically. Run 'winget install Starship.Starship' in PowerShell."
+        fi
+    else
+        success "starship.exe already present in ${win_user_dir}/bin/starship.exe"
+    fi
+
+    # 3. Configure PowerShell profiles across standard Documents and OneDrive Documents
+    local ps_dirs=(
+        "${win_user_dir}/Documents/WindowsPowerShell"
+        "${win_user_dir}/Documents/PowerShell"
+    )
+    for onedrive_candidate in "${win_user_dir}"/OneDrive*; do
+        if [ -d "$onedrive_candidate" ]; then
+            for doc_name in "Documentos" "Documents"; do
+                if [ -d "$onedrive_candidate/$doc_name" ]; then
+                    ps_dirs+=("$onedrive_candidate/$doc_name/WindowsPowerShell" "$onedrive_candidate/$doc_name/PowerShell")
+                fi
+            done
+        fi
+    done
+
+    for pdir in "${ps_dirs[@]}"; do
+        mkdir -p "$pdir"
+        local pfile="${pdir}/Microsoft.PowerShell_profile.ps1"
+        cat << 'EOF' > "$pfile"
+# =====================================================================
+# Windows PowerShell Profile - Catppuccin Mocha & Starship
+# =====================================================================
+
+# 1. UTF-8 Encoding for proper glyph rendering (, ╭─, ╰─)
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
+# 2. Path to Starship executable
+$UserBin = "$HOME\bin"
+if (Test-Path "$UserBin\starship.exe") {
+    if ($env:PATH -notlike "*$UserBin*") {
+        $env:PATH = "$UserBin;$env:PATH"
+    }
+}
+
+# 3. Explicit config path for Starship
+$env:STARSHIP_CONFIG = "$HOME\.config\starship.toml"
+
+# 4. Initialize Starship Prompt
+if (Get-Command starship -ErrorAction SilentlyContinue) {
+    Invoke-Expression (&starship init powershell)
+}
+
+# 5. Syntax highlighting colors (Catppuccin Mocha)
+if (Get-Module -ListAvailable -Name PSReadLine) {
+    Import-Module PSReadLine
+    try {
+        Set-PSReadLineOption -Colors @{
+            Command   = "`e[38;2;137;180;250m" # Blue (#89b4fa)
+            Parameter = "`e[38;2;203;166;247m" # Mauve (#cba6f7)
+            Operator  = "`e[38;2;137;220;235m" # Sky (#89dceb)
+            Variable  = "`e[38;2;245;194;231m" # Pink (#f5c2e7)
+            String    = "`e[38;2;166;227;161m" # Green (#a6e3a1)
+            Number    = "`e[38;2;250;179;135m" # Peach (#fab387)
+            Type      = "`e[38;2;249;226;175m" # Yellow (#f9e2af)
+            Comment   = "`e[38;2;108;112;134m" # Overlay0 (#6c7086)
+            Error     = "`e[38;2;243;139;168m" # Red (#f38ba8)
+        }
+    } catch {
+        try {
+            Set-PSReadLineOption -Colors @{
+                Command   = 'Cyan'
+                Parameter = 'Magenta'
+                Operator  = 'DarkCyan'
+                Variable  = 'Yellow'
+                String    = 'Green'
+                Number    = 'DarkYellow'
+                Type      = 'DarkCyan'
+                Comment   = 'DarkGray'
+                Error     = 'Red'
+            }
+        } catch { }
+    }
+}
+
+# 6. Aliases
+Set-Alias -Name g -Value git -ErrorAction SilentlyContinue
+Set-Alias -Name gs -Value git-status -ErrorAction SilentlyContinue
+function git-status { git status }
+EOF
+        success "Configured Starship and Catppuccin in PowerShell profile: ${pfile}"
+    done
+}
+
 configure_windows_terminal() {
     info "Configuring Windows Terminal appearance and color scheme..."
     if [ -f "${SCRIPT_DIR}/apply-windows-terminal-settings.py" ]; then
@@ -245,6 +369,7 @@ main() {
     apply_prompt_config
     setup_zsh_and_omz
     download_nerd_fonts
+    setup_windows_powershell
     configure_windows_terminal
     check_default_shell
 

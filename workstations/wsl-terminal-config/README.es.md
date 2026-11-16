@@ -31,7 +31,8 @@ Una configuración visual portable y estética para **Windows Terminal + WSL Ubu
 - **Prompt**: Formato minimalista de Starship en 2 líneas con la paleta Catppuccin Mocha.
 - **Integración con Git**: Muestra el nombre de la rama, el glifo (``) y el estado del árbol de trabajo (cambios sin confirmar, por delante, por detrás).
 - **Tipografía**: Fuente CaskaydiaCove Nerd Font Mono (Cascadia Code con iconos y glifos para desarrolladores).
-- **Windows Terminal**: Paleta completa Catppuccin Mocha, cursor tipo barra, padding cómodo, transparencia acrílica (95%) y pestaña con acento de color.
+- **Windows Terminal**: Paleta completa Catppuccin Mocha, cursor tipo barra, padding cómodo, transparencia acrílica (95%) y pestaña con acento de color aplicados tanto a Ubuntu como a Windows PowerShell.
+- **Sincronización con PowerShell**: Soporte y sincronización integral para Windows PowerShell (5.1) y PowerShell 7 Core usando la misma configuración de Starship, fuente y tema Catppuccin.
 - **Compatibilidad**: Integración total con Oh My Zsh y migración limpia de variables y alias existentes de `.bashrc`.
 
 ---
@@ -48,7 +49,8 @@ Debido a que Windows y WSL son dos entornos con límites de permisos y seguridad
 | **Oh My Zsh y `.zshrc`** | **Sí** | Ninguna | Clona OMZ, crea un respaldo `~/.zshrc.bak`, aplica `ZSH_THEME=""` e importa alias. |
 | **Descarga de Fuentes Nerd Font** | **Sí** | Ninguna | Descarga v3.5.1 y extrae los 4 archivos TTF en `Descargas\CascadiaCode-NerdFont` de Windows. |
 | **Instalar fuentes en Windows** | **No** | **Sí (1 clic)** | Por seguridad de Windows, debes hacer clic derecho sobre los 4 `.ttf` y pulsar **Instalar**. |
-| **Ajustes de Windows Terminal** | **Sí** | Ninguna | Localiza tu `settings.json`, genera respaldo y fusiona el tema y el perfil. |
+| **Ajustes de Windows Terminal** | **Sí** | Ninguna | Localiza tu `settings.json`, genera respaldo y aplica el tema y perfil a Ubuntu y PowerShell. |
+| **Sincronización con PowerShell** | **Sí** | Ninguna | Sincroniza el prompt en `%USERPROFILE%\.config\starship.toml`, crea el perfil `ps1` e instala `starship.exe` en `%USERPROFILE%\bin`. |
 | **Zsh como shell por defecto** | **Guiado** | **Sí (1 comando)** | Ejecutar `chsh -s $(which zsh)` para cambiar tu shell de login de bash a zsh. |
 | **Reinicio de Terminal** | **No** | **Sí** | Cerrar y volver a abrir Windows Terminal para que cargue la nueva fuente. |
 
@@ -196,11 +198,40 @@ chsh -s $(which zsh)
 
 Cierra Windows Terminal y vuelve a abrirlo.
 
+### Paso 8: (Opcional) Sincronización con Windows PowerShell
+
+Para disfrutar exactamente de la misma apariencia y prompt en PowerShell nativo de Windows:
+
+1. **Instalar Starship en Windows**:
+   Ejecuta en PowerShell:
+   ```powershell
+   winget install --id Starship.Starship
+   ```
+   *(O el instalador automático `install.sh` ubicará `starship.exe` en `%USERPROFILE%\bin\starship.exe` automáticamente).*
+
+2. **Sincronizar la configuración del prompt**:
+   Asegúrate de que `starship.toml` esté copiado en `%USERPROFILE%\.config\starship.toml`.
+
+3. **Configurar el perfil de PowerShell**:
+   Edita `Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1` (o `Documents\PowerShell\Microsoft.PowerShell_profile.ps1`):
+   ```powershell
+   if (Get-Command starship -ErrorAction SilentlyContinue) {
+       Invoke-Expression (&starship init powershell)
+   }
+   Set-Alias -Name g -Value git
+   ```
+
+4. **Permitir scripts locales en PowerShell**:
+   Si PowerShell muestra una advertencia de política de ejecución al cargar tu perfil, ejecuta una sola vez:
+   ```powershell
+   Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+   ```
+
 ---
 
 ## Verificación y pruebas automatizadas
 
-El repositorio incluye un conjunto de pruebas automatizadas en `scripts/verify.sh` que comprueba 13 puntos clave:
+El repositorio incluye un conjunto de pruebas automatizadas en `scripts/verify.sh` que comprueba 16 puntos clave:
 
 ```bash
 ./scripts/verify.sh
@@ -219,6 +250,10 @@ Comprobaciones realizadas:
 - [x] Presencia del esquema Catppuccin Mocha en `settings.json`
 - [x] Asignación de la fuente al perfil Ubuntu en Windows Terminal
 - [x] Prueba de renderizado del prompt con glifos de Git en sesión Zsh interactiva
+- [x] Sincronización de `starship.toml` en el home de Windows (`%USERPROFILE%\.config\starship.toml`)
+- [x] Disponibilidad del binario `starship.exe` para Windows
+- [x] Perfil de PowerShell configurado con el hook de Starship (`Microsoft.PowerShell_profile.ps1`)
+- [x] Perfil de Windows PowerShell estilizado en Windows Terminal
 
 ---
 
